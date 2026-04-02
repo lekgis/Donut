@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมส์น้องโดนัท</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff6b6b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #ffe6e6; /* สีพื้นหลังโทนชมพูอ่อน */
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 300px;
+            border-bottom: 4px solid #ff6b6b;
+            position: relative;
+            background-color: #fff;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        #dino {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            bottom: 0;
+            left: 50px;
+            font-size: 40px;
+            line-height: 50px;
+            z-index: 2;
+        }
+
+        .cactus {
+            width: 30px;
+            height: 50px;
+            position: absolute;
+            bottom: 0;
+            left: 800px;
+            font-size: 30px;
+            line-height: 50px;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 24px;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        #start-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #535353;
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ff6b6b;
+        }
+
+        .jump-animation {
+            animation: jump 0.5s linear;
+        }
+
+        @keyframes jump {
+            0% { bottom: 0; }
+            30% { bottom: 100px; }
+            70% { bottom: 100px; }
+            100% { bottom: 0; }
+        }
+        
+        h1 {
+            color: #ff6b6b;
+            margin: 0 0 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="dino">🦖</div>
+        <div id="score">Score: 0</div>
+        <div id="start-msg">
+            <h1>เกมส์น้องโดนัท</h1>
+            <p>กดช่องว่าง หรือ แตะหน้าจอ เพื่อเริ่มเล่น</p>
+            <small>(ช่วยไดโนเสาร์วิ่งหลบอุปสรรค)</small>
+        </div>
+    </div>
+
+    <script>
+        const dino = document.getElementById("dino");
+        const gameContainer = document.getElementById("game-container");
+        const scoreElement = document.getElementById("score");
+        const startMsg = document.getElementById("start-msg");
+
+        let isJumping = false;
+        let isGameOver = false;
+        let score = 0;
+        let gameInterval;
+        let obstacleInterval;
+        let obstacleTimers = []; // เก็บ timer ของอุปสรรคเพื่อลบได้ถูกต้อง
+
+        function jump() {
+            if (isJumping) return;
+            isJumping = true;
+            dino.classList.add("jump-animation");
+            setTimeout(() => {
+                dino.classList.remove("jump-animation");
+                isJumping = false;
+            }, 500);
+        }
+
+        function startGame() {
+            if (isGameOver) {
+                resetGame();
+            } else if (!gameInterval) {
+                startMsg.style.display = 'none';
+                gameInterval = setInterval(updateGame, 20);
+                obstacleInterval = setInterval(createObstacle, 1500);
+            }
+        }
+
+        function createObstacle() {
+            if (isGameOver) return;
+            const cactus = document.createElement('div');
+            cactus.classList.add('cactus');
+            cactus.innerText = '🌵';
+            gameContainer.appendChild(cactus);
+
+            let cactusLeft = 800;
+            
+            let timerId = setInterval(() => {
+                if (isGameOver) {
+                    clearInterval(timerId);
+                    return;
+                }
+
+                cactusLeft -= 6; // ความเร็วเพิ่มขึ้นนิดหน่อย
+                cactus.style.left = cactusLeft + 'px';
+
+                // ตรวจสอบการชน
+                let dinoTop = parseInt(window.getComputedStyle(dino).getPropertyValue("top"));
+                // เกมสูง 300, dino สูง 50, พื้นอยู่ตรง bottom:0 -> top จะประมาณ 250
+                if (cactusLeft > 50 && cactusLeft < 90) {
+                    if (dinoTop >= 250) { 
+                        gameOver();
+                    }
+                }
+
+                if (cactusLeft < -30) {
+                    clearInterval(timerId);
+                    gameContainer.removeChild(cactus);
+                    score++;
+                    scoreElement.innerText = "Score: " + score;
+                }
+            }, 20);
+            
+            obstacleTimers.push(timerId);
+        }
+
+        function updateGame() {
+            // Logic พื้นฐาน
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            clearInterval(gameInterval);
+            clearInterval(obstacleInterval);
+            
+            // ลบ timer อุปสรรคทั้งหมด
+            obstacleTimers.forEach(t => clearInterval(t));
+            obstacleTimers = [];
+
+            alert("เกมจบ! คะแนนของคุณ: " + score + "\nขอบคุณที่เล่น เกมส์โดนัท");
+            startMsg.innerHTML = "<h1>เกมส์โดนัท</h1><p>กดเพื่อเล่นใหม่</p>";
+            startMsg.style.display = 'block';
+            
+            const cactuses = document.querySelectorAll('.cactus');
+            cactuses.forEach(c => c.remove());
+        }
+
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            scoreElement.innerText = "Score: 0";
+            startMsg.style.display = 'none';
+            
+            gameInterval = setInterval(updateGame, 20);
+            obstacleInterval = setInterval(createObstacle, 1500);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' || event.code === 'ArrowUp') {
+                if(isGameOver || !gameInterval) {
+                    startGame();
+                } else {
+                    jump();
+                }
+            }
+        });
+
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // ป้องกันการซูม
+            if(isGameOver || !gameInterval) {
+                startGame();
+            } else {
+                jump();
+            }
+        });
+        
+        document.addEventListener('click', () => {
+             if(isGameOver || !gameInterval) {
+                startGame();
+            } else {
+                jump();
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Service Worker Registered'))
+                .catch(err => console.error('SW Error:', err));
+        }
+    </script>
+</body>
+</html>
